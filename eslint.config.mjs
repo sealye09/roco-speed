@@ -25,6 +25,7 @@ const config = [
     rules: {
       'perfectionist/sort-imports': 'error',
       'tailwindcss/no-custom-classname': 'off',
+      "@next/next/no-img-element": "off",
     },
   },
 ];
