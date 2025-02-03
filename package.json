@@ -2,6 +2,7 @@
   "name": "roco-speed",
   "version": "0.1.0",
   "private": true,
+  "description": "洛克王国宠物能力极限值查询工具。",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
