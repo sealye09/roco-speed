@@ -22,6 +22,7 @@ import {
   ShieldPlus,
 } from 'lucide-react';
 import { useState, useMemo, useCallback } from 'react';
+import * as XLSX from 'xlsx';
 
 import type { Pet } from '~/types';
 
@@ -412,6 +413,121 @@ export function PetTable({ pets }: { pets: Pet[] }) {
     [table],
   );
 
+  // 添加导出函数
+  const handleExportExcel = useCallback(() => {
+    const rowsToExport = Object.keys(rowSelection).length > 0
+      ? table.getSelectedRowModel().rows
+      : table.getFilteredRowModel().rows;
+
+    const exportData = rowsToExport.map(row => {
+      const pet = row.original;
+      const visibleData: Record<string, unknown> = {};
+
+      // 基础字段固定顺序
+      const baseFields = ['序号', '宠物名', '系别'];
+      baseFields.forEach(field => {
+        switch(field) {
+          case '序号':
+            if (columnVisibility.markno) visibleData[field] = pet.markno;
+            break;
+          case '宠物名':
+            if (columnVisibility.name) visibleData[field] = pet.name;
+            break;
+          case '系别':
+            if (columnVisibility.series) visibleData[field] = pet.series;
+            break;
+        }
+      });
+
+      // 属性数据按固定顺序
+      stats.forEach(({ key, label }) => {
+        if (columnVisibility[key]) {
+          const value = pet[key];
+          const calculated = calculateStats(value, statsConfig, key as StatType);
+
+          // 原始值和计算值
+          visibleData[`${label}(原始)`] = value;
+          visibleData[`${label}(计算)`] = calculated.base;
+
+          // 强化数据
+          if (columnVisibility.enhanced) {
+            statsConfig.enhanceRange.forEach(level => {
+              visibleData[`${label}(${level > 0 ? '+' : ''}${level})`] = calculated.enhanced[level];
+            });
+          }
+        }
+      });
+
+      return visibleData;
+    });
+
+    // 创建工作簿
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(exportData);
+
+    // 设置列宽
+    const columnWidths: { [key: string]: number } = {};
+    if (exportData.length > 0) {
+      Object.keys(exportData[0]).forEach((key) => {
+        columnWidths[key] = Math.max(
+          key.length * 2,
+          ...exportData.map((row) => String(row[key]).length * 2)
+        );
+      });
+    }
+    ws['!cols'] = Object.values(columnWidths).map(width => ({ wch: width }));
+
+    // 设置表头样式和功能
+    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+    const headerRange = {
+      s: { r: 0, c: 0 },
+      e: { r: 0, c: range.e.c }
+    };
+
+    // 添加筛选功能
+    ws['!autofilter'] = { ref: XLSX.utils.encode_range(headerRange) };
+
+    // 冻结首行和序号列
+    ws['!freeze'] = {
+      split: columnVisibility['markno'] ? 'B2' : 'A2',
+      topLeftCell: columnVisibility['markno'] ? 'B2' : 'A2'
+    };
+
+    // 优化表头样式
+    for (let C = headerRange.s.c; C <= headerRange.e.c; ++C) {
+      const cell = XLSX.utils.encode_cell({ r: 0, c: C });
+      if (!ws[cell]) continue;
+
+      ws[cell].s = {
+        font: {
+          bold: true,
+          color: { rgb: "FFFFFF" },
+          name: "微软雅黑",
+          sz: 11
+        },
+        fill: {
+          patternType: "solid",
+          fgColor: { rgb: "366092" }  // 深蓝色背景
+        },
+        alignment: {
+          horizontal: "center",
+          vertical: "center",
+          wrapText: true
+        },
+        border: {
+          top: { style: "medium", color: { rgb: "FFFFFF" } },
+          bottom: { style: "medium", color: { rgb: "FFFFFF" } },
+          left: { style: "medium", color: { rgb: "FFFFFF" } },
+          right: { style: "medium", color: { rgb: "FFFFFF" } }
+        }
+      };
+    }
+
+    XLSX.utils.book_append_sheet(wb, ws, '宠物数据');
+    const fileName = `宠物数据导出_${Object.keys(rowSelection).length > 0 ? '已选择' : '全部'}_${new Date().toLocaleString()}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+  }, [table, columnVisibility, statsConfig, rowSelection]);
+
   const hasNoData = table.getRowModel().rows.length === 0;
 
   return (
@@ -472,8 +588,14 @@ export function PetTable({ pets }: { pets: Pet[] }) {
           </PopoverContent>
         </Popover>
 
-        <div className='ml-auto'>
-          已选择: {Object.keys(rowSelection).length} 个
+        <div className='ml-auto flex items-center gap-4'>
+          <div>已选择: {Object.keys(rowSelection).length} 个</div>
+          <Button
+            variant='outline'
+            onClick={handleExportExcel}
+          >
+            {Object.keys(rowSelection).length > 0 ? '导出所选' : '导出全部'}
+          </Button>
         </div>
       </div>
 
