@@ -415,18 +415,19 @@ export function PetTable({ pets }: { pets: Pet[] }) {
 
   // 添加导出函数
   const handleExportExcel = useCallback(() => {
-    const rowsToExport = Object.keys(rowSelection).length > 0
-      ? table.getSelectedRowModel().rows
-      : table.getFilteredRowModel().rows;
+    const rowsToExport =
+      Object.keys(rowSelection).length > 0
+        ? table.getSelectedRowModel().rows
+        : table.getFilteredRowModel().rows;
 
-    const exportData = rowsToExport.map(row => {
+    const exportData = rowsToExport.map((row) => {
       const pet = row.original;
       const visibleData: Record<string, unknown> = {};
 
       // 基础字段固定顺序
       const baseFields = ['序号', '宠物名', '系别'];
-      baseFields.forEach(field => {
-        switch(field) {
+      baseFields.forEach((field) => {
+        switch (field) {
           case '序号':
             if (columnVisibility.markno) visibleData[field] = pet.markno;
             break;
@@ -443,7 +444,11 @@ export function PetTable({ pets }: { pets: Pet[] }) {
       stats.forEach(({ key, label }) => {
         if (columnVisibility[key]) {
           const value = pet[key];
-          const calculated = calculateStats(value, statsConfig, key as StatType);
+          const calculated = calculateStats(
+            value,
+            statsConfig,
+            key as StatType,
+          );
 
           // 原始值和计算值
           visibleData[`${label}(原始)`] = value;
@@ -451,8 +456,9 @@ export function PetTable({ pets }: { pets: Pet[] }) {
 
           // 强化数据
           if (columnVisibility.enhanced) {
-            statsConfig.enhanceRange.forEach(level => {
-              visibleData[`${label}(${level > 0 ? '+' : ''}${level})`] = calculated.enhanced[level];
+            statsConfig.enhanceRange.forEach((level) => {
+              visibleData[`${label}(${level > 0 ? '+' : ''}${level})`] =
+                calculated.enhanced[level];
             });
           }
         }
@@ -471,17 +477,17 @@ export function PetTable({ pets }: { pets: Pet[] }) {
       Object.keys(exportData[0]).forEach((key) => {
         columnWidths[key] = Math.max(
           key.length * 2,
-          ...exportData.map((row) => String(row[key]).length * 2)
+          ...exportData.map((row) => String(row[key]).length * 2),
         );
       });
     }
-    ws['!cols'] = Object.values(columnWidths).map(width => ({ wch: width }));
+    ws['!cols'] = Object.values(columnWidths).map((width) => ({ wch: width }));
 
     // 设置表头样式和功能
     const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
     const headerRange = {
       s: { r: 0, c: 0 },
-      e: { r: 0, c: range.e.c }
+      e: { r: 0, c: range.e.c },
     };
 
     // 添加筛选功能
@@ -490,7 +496,7 @@ export function PetTable({ pets }: { pets: Pet[] }) {
     // 冻结首行和序号列
     ws['!freeze'] = {
       split: columnVisibility['markno'] ? 'B2' : 'A2',
-      topLeftCell: columnVisibility['markno'] ? 'B2' : 'A2'
+      topLeftCell: columnVisibility['markno'] ? 'B2' : 'A2',
     };
 
     // 优化表头样式
@@ -501,25 +507,25 @@ export function PetTable({ pets }: { pets: Pet[] }) {
       ws[cell].s = {
         font: {
           bold: true,
-          color: { rgb: "FFFFFF" },
-          name: "微软雅黑",
-          sz: 11
+          color: { rgb: 'FFFFFF' },
+          name: '微软雅黑',
+          sz: 11,
         },
         fill: {
-          patternType: "solid",
-          fgColor: { rgb: "366092" }  // 深蓝色背景
+          patternType: 'solid',
+          fgColor: { rgb: '366092' }, // 深蓝色背景
         },
         alignment: {
-          horizontal: "center",
-          vertical: "center",
-          wrapText: true
+          horizontal: 'center',
+          vertical: 'center',
+          wrapText: true,
         },
         border: {
-          top: { style: "medium", color: { rgb: "FFFFFF" } },
-          bottom: { style: "medium", color: { rgb: "FFFFFF" } },
-          left: { style: "medium", color: { rgb: "FFFFFF" } },
-          right: { style: "medium", color: { rgb: "FFFFFF" } }
-        }
+          top: { style: 'medium', color: { rgb: 'FFFFFF' } },
+          bottom: { style: 'medium', color: { rgb: 'FFFFFF' } },
+          left: { style: 'medium', color: { rgb: 'FFFFFF' } },
+          right: { style: 'medium', color: { rgb: 'FFFFFF' } },
+        },
       };
     }
 
@@ -590,10 +596,7 @@ export function PetTable({ pets }: { pets: Pet[] }) {
 
         <div className='ml-auto flex items-center gap-4'>
           <div>已选择: {Object.keys(rowSelection).length} 个</div>
-          <Button
-            variant='outline'
-            onClick={handleExportExcel}
-          >
+          <Button variant='outline' onClick={handleExportExcel}>
             {Object.keys(rowSelection).length > 0 ? '导出所选' : '导出全部'}
           </Button>
         </div>
